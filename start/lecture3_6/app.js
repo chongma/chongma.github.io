@@ -134,6 +134,7 @@ class App {
 
     updateGamepadState() {
         const session = this.renderer.xr.getSession()
+
         const inputSource = session.inputSources[0]
 
         if (inputSource && inputSource.gamepad && this.gamepadIndices && this.ui && this.buttonStates) {
@@ -148,8 +149,9 @@ class App {
                         this.buttonStates[key].xAxis = gamepad.axes[xAxisIndex].toFixed(2)
                         this.buttonStates[key].yAxis = gamepad.axes[yAxisIndex].toFixed(2)
                     } else {
-                        this.buttonStates[key].button = gamepad.buttons[buttonIndex].value
+                        this.buttonStates[key] = gamepad.buttons[buttonIndex].value
                     }
+
                     this.updateUI()
                 })
             } catch (err) {
@@ -166,8 +168,8 @@ class App {
         const self = this;
 
         function onConnected(event) {
-            //self.updateControllers({ right: { trigger: true, squeeze: true } })
             const info = {}
+
             fetchProfile(event.data, DEFAULT_PROFILES_PATH, DEFAULT_PROFILE).then(({ profile, assetPath }) => {
                 info.name = profile.profileId
                 info.targetRayMode = event.data.targetRayMode
@@ -175,7 +177,7 @@ class App {
                 Object.entries(profile.layouts).forEach(([key, layout]) => {
                     const components = {}
                     Object.values(layout.components).forEach((component) => {
-                        component[component.rootNodeName] = component.gamepadIndices
+                        components[component.rootNodeName] = component.gamepadIndices
                     })
                     info[key] = components
                 })
