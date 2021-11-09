@@ -77,9 +77,7 @@ class App {
             this.room.add(object);
         }
 
-        this.highlight = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-            color: 0xFFFFFF, side: THREE.BackSide
-        }))
+        this.highlight = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xFFFFFF, side: THREE.BackSide }))
         this.highlight.scale.set(1.2, 1.2, 1.2)
         this.scene.add(this.highlight)
     }
@@ -148,7 +146,7 @@ class App {
 
             this.raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld)
 
-            this.raycaster.ray.direction.set(0, 0, -1).applyMatrix4(controller.matrixWorld)
+            this.raycaster.ray.direction.set(0, 0, -1).applyMatrix4(this.workingMatrix)
 
             const intersects = this.raycaster.intersectObjects(this.room.children)
 
