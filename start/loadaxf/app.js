@@ -1,10 +1,18 @@
 import * as THREE from '../../libs/three/three.module.js';
 import { VRButton } from './VRButton.js';
+import { CanvasUI } from '../../libs/CanvasUI.js';
 import { XRControllerModelFactory } from '../../libs/three/jsm/XRControllerModelFactory.js';
 import { BoxLineGeometry } from '../../libs/three/jsm/BoxLineGeometry.js';
 import { Stats } from '../../libs/stats.module.js';
 import { OrbitControls } from '../../libs/three/jsm/OrbitControls.js';
-// import * as AxfBean from '../../libs/axf-bean.js';
+import {
+    Constants as MotionControllerConstants,
+    fetchProfile,
+    MotionController
+} from '../../libs/three/jsm/motion-controllers.module.js';
+
+const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles';
+const DEFAULT_PROFILE = 'generic-trigger';
 
 class App {
     constructor() {
@@ -296,6 +304,64 @@ class App {
     setupVR() {
         this.renderer.xr.enabled = true;
         const button = new VRButton(this.renderer);
+
+        const self = this;
+
+        function onConnected(event) {
+            const info = {}
+
+            fetchProfile(event.data, DEFAULT_PROFILES_PATH, DEFAULT_PROFILE).then(({ profile, assetPath }) => {
+                info.name = profile.profileId
+                info.targetRayMode = event.data.targetRayMode
+
+                Object.entries(profile.layouts).forEach(([key, layout]) => {
+                    const components = {}
+                    Object.values(layout.components).forEach((component) => {
+                        components[component.rootNodeName] = component.gamepadIndices
+                    })
+                    info[key] = components
+                })
+
+                self.createButtonStates(info.right)
+                self.updateControllers(info)
+            })
+        }
+
+        const controller = this.renderer.xr.getController(0);
+
+        controller.addEventListener('connected', onConnected);
+
+        const modelFactory = new XRControllerModelFactory();
+
+        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+
+        const line = new THREE.Line(geometry);
+        line.scale.z = 0;
+
+        this.controllers = {};
+        this.controllers.right = this.buildController(0, line, modelFactory);
+        this.controllers.left = this.buildController(1, line, modelFactory);
+    }
+
+    buildController(index, line, modelFactory) {
+        const controller = this.renderer.xr.getController(index);
+
+        controller.userData.selectPressed = false;
+        controller.userData.index = index;
+
+        if (line) controller.add(line.clone());
+
+        this.scene.add(controller);
+
+        let grip;
+
+        if (modelFactory) {
+            grip = this.renderer.xr.getControllerGrip(index);
+            grip.add(modelFactory.createControllerModel(grip));
+            this.scene.add(grip);
+        }
+
+        return { controller, grip };
     }
 
     resize() {
