@@ -9,6 +9,7 @@ import { OrbitControls } from '../../libs/three/jsm/OrbitControls.js';
 class App {
     constructor() {
         this.factor = 1 / 10000
+        this.factor2 = 1 / 1000
 
         const container = document.createElement('div');
         document.body.appendChild(container);
@@ -77,9 +78,11 @@ class App {
         }
 
         this.loadAxf()
+        this.loadObj()
         const self = this
         setTimeout(function () {
             self.renderAxf()
+            self.renderObj()
         }, 1000)
 
     }
@@ -184,7 +187,7 @@ class App {
         this.group = new THREE.Group();
         this.room.add(this.group);
         // this.renderer.setAnimationLoop(this.animate);
-        console.log(this.axf)
+        // console.log(this.axf)
         if (this.axf) {
             const fcolour = this.randomColour();
             const scolour = this.randomColour();
@@ -217,9 +220,77 @@ class App {
                 }
             });
         }
-        this.group.position.x = 0
+        this.group.position.x = 1
         this.group.position.y = 1
         this.group.position.z = -1
+    }
+
+    loadObj() {
+        var oReq = new XMLHttpRequest();
+        oReq.open("GET", "/start/loadaxf/test.obj", true);
+        oReq.responseType = "arraybuffer";
+
+        const self = this
+
+        oReq.onload = function (oEvent) {
+            var arrayBuffer = oReq.response; // Note: not oReq.responseText
+            console.log(arrayBuffer)
+            var b = buffer.Buffer.from(arrayBuffer)
+            var lines = b.toString().split(/(?:\r\n|\r|\n)/g);
+            let vertices = []
+            lines.forEach(line => {
+                if (line.startsWith('v ')) {
+                    let parts = line.split(' ')
+                    let vertex = [parts[1], parts[2], parts[3]]
+                    vertices.push(vertex)
+                }
+            })
+            self.obj = vertices
+        };
+        oReq.send(null);
+    }
+
+    renderObj() {
+        this.scene.remove(this.group2);
+        this.group2 = new THREE.Group();
+        this.room.add(this.group2);
+        // this.renderer.setAnimationLoop(this.animate);
+        // console.log(this.obj)
+        if (this.obj) {
+            const colour = this.randomColour();
+            this.renderPointCloudColour(this.geometryPoints(), colour)
+        }
+        this.group2.position.x = -1
+        this.group2.position.y = 0
+        this.group2.position.z = -1
+    }
+
+    geometryPoints() {
+        const geometry = new THREE.BufferGeometry();
+        const positions = [];
+        this.obj.forEach((node, index) => {
+            const x = node[0];
+            const y = node[1];
+            const z = node[2];
+            positions.push(x, y, z);
+        });
+        // console.log(positions);
+        geometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(positions, 3)
+        );
+        geometry.computeBoundingSphere();
+        geometry.scale(this.factor2, this.factor2, this.factor2);
+        return geometry;
+    }
+
+    renderPointCloudColour(points, colour) {
+        const material = new THREE.PointsMaterial({
+            size: 0.01,
+            color: colour
+        });
+        const cloud = new THREE.Points(points, material);
+        this.group2.add(cloud);
     }
 
     setupVR() {
