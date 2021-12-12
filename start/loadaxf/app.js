@@ -31,6 +31,7 @@ let controller
 let controllerGrip
 let controllerLine
 let particles
+let pointclouds
 
 let axf
 let obj
@@ -104,8 +105,8 @@ function initScene() {
 
     // loadBalls()
 
-    loadAxf()
-    // loadObj()
+    // loadAxf()
+    loadObj()
     setTimeout(function () {
         renderAxf()
         renderObj()
@@ -299,22 +300,33 @@ function loadGeometryBalls() {
 }
 
 function geometryPoints() {
-    const positions = [];
+    const geometry = new THREE.BufferGeometry();
+    const numPoints = obj.length;
+    const positions = new Float32Array(numPoints * 3);
+    const colors = new Float32Array(numPoints * 3);
+    let k = 0;
     obj.forEach((node, index) => {
         const x = node[0];
         const y = node[1];
         const z = node[2];
-        positions.push(x, y, z);
+        positions[3 * k] = x;
+        positions[3 * k + 1] = y;
+        positions[3 * k + 2] = z;
+        const colour = new THREE.Color(randomColour())
+        colors[3 * k] = colour.r;
+        colors[3 * k + 1] = colour.g;
+        colors[3 * k + 2] = colour.b;
+        k++;
     });
-    // console.log(positions);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.computeBoundingBox()
-    const material = new THREE.PointsMaterial({ color: randomColour(), size: PARTICLE_SIZE });
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.computeBoundingBox();
+    const material = new THREE.PointsMaterial({ size: PARTICLE_SIZE, vertexColors: true });
     particles = new THREE.Points(geometry, material);
     particles.scale.set(factor2, factor2, factor2)
     particles.position.set(-1, 0, -1)
-    room.add(particles);
+    scene.add(particles);
+    pointclouds = [particles]
 }
 
 function geometryPoints2() {
@@ -444,7 +456,8 @@ function handleController(controller) {
     raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld)
     raycaster.ray.direction.set(0, 0, -1).applyMatrix4(workingMatrix)
 
-    const intersects = raycaster.intersectObjects(room.children, false)
+    // const intersects = raycaster.intersectObjects(room.children, false)
+    const intersects = raycaster.intersectObjects(pointclouds, false);
 
     // const geometry = particles.geometry;
     // const attributes = geometry.attributes;
