@@ -103,10 +103,10 @@ function initScene() {
 
     loadMarker()
 
-    // loadBalls()
+    loadBalls()
 
-    // loadAxf()
-    loadObj()
+    loadAxf()
+    // loadObj()
     setTimeout(function () {
         renderAxf()
         renderObj()
