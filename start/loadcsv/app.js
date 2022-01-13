@@ -1,5 +1,6 @@
 import * as THREE from '../../libs/three/three.module.js';
 
+import { RGBELoader } from '../../libs/three/jsm/RGBELoader.js';
 import { Stats } from '../../libs/stats.module.js';
 import { XRControllerModelFactory } from '../../libs/three/jsm/XRControllerModelFactory.js';
 import { VRButton } from './VRButton.js';
@@ -202,21 +203,18 @@ function init() {
 
     // controls = new OrbitControls(camera, renderer.domElement);
     // controls.target.set(0, 1.6, 0);
-    // controls.update();
-
-    //
+    // controls.update();   
 
     raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = threshold;
 
     workingMatrix = new THREE.Matrix4()
-    //
 
     stats = new Stats();
     container.appendChild(stats.dom);
 
     setupXR();
-    //
+    // setEnvironment()
 
     window.addEventListener('resize', onWindowResize);
     // document.addEventListener('pointermove', onPointerMove);
@@ -391,6 +389,19 @@ function createButtonStates(components) {
             buttonStates[key] = 0;
         }
     })
+}
+
+function setEnvironment() {
+    const loader = new RGBELoader().setDataType(THREE.UnsignedByteType);
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    loader.load('../../assets/hdr/factory.hdr', (texture) => {
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        pmremGenerator.dispose();
+        scene.environment = envMap;
+    }, undefined, (err) => {
+        console.error('An error occurred setting the environment');
+    });
 }
 
 function handleController(controller) {

@@ -212,7 +212,8 @@ function loadAxf() {
         var arrayBuffer = oReq.response; // Note: not oReq.responseText
         // console.log(arrayBuffer)
         var b = buffer.Buffer.from(arrayBuffer)
-        axf = AxfBean.readAxf(b)
+        console.log(axfBean)
+        axf = axfBean.readAxf(b)
     };
     oReq.send(null);
 }
