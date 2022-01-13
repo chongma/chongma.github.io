@@ -213,7 +213,7 @@ function loadAxf() {
         // console.log(arrayBuffer)
         var b = buffer.Buffer.from(arrayBuffer)
         console.log(axfBean)
-        axf = axfBean.readAxf(b)
+        axf = axfBean.default.readAxf(b)
     };
     oReq.send(null);
 }
