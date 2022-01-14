@@ -34,16 +34,7 @@ const width = 80
 const length = 160
 const rotateY = new THREE.Matrix4().makeRotationY(0.005)
 
-start()
-
-async function start() {
-    try {
-        await loadCsv()
-        init()
-    } catch (err) {
-        console.error(err)
-    }
-}
+init()
 
 function loadCsv() {
     return new Promise(function (resolve, reject) {
@@ -133,12 +124,9 @@ function generatePointCloudGeometry(color) {
 }
 
 function generatePointcloud(color) {
-
     const geometry = generatePointCloudGeometry(color);
     const material = new THREE.PointsMaterial({ size: pointSize, vertexColors: true });
-
     return new THREE.Points(geometry, material);
-
 }
 
 function init() {
@@ -160,30 +148,13 @@ function init() {
     light.position.set(1, 1, 1).normalize();
     scene.add(light);
 
-    const pcBuffer = generatePointcloud(new THREE.Color(0, 1, 0));
-    pcBuffer.scale.set(0.002, 0.002, 0.002);
-    pcBuffer.position.set(0, -1, -2);
-    scene.add(pcBuffer);
-    pointclouds = [pcBuffer]
-
-    // const pcBuffer = generatePointcloud(new THREE.Color(1, 0, 0), width, length);
-    // pcBuffer.scale.set(5, 10, 10);
-    // pcBuffer.position.set(- 5, 0, 0);
-    // scene.add(pcBuffer);
-
-    // const pcIndexed = generateIndexedPointcloud(new THREE.Color(0, 1, 0), width, length);
-    // pcIndexed.scale.set(5, 10, 10);
-    // pcIndexed.position.set(0, 0, 0);
-    // scene.add(pcIndexed);
-
-    // const pcIndexedOffset = generateIndexedWithOffsetPointcloud(new THREE.Color(0, 1, 1), width, length);
-    // pcIndexedOffset.scale.set(5, 10, 10);
-    // pcIndexedOffset.position.set(5, 0, 0);
-    // scene.add(pcIndexedOffset);
-
-    // pointclouds = [pcBuffer, pcIndexed, pcIndexedOffset];
-
-    //
+    loadCsv().then(function () {
+        const pcBuffer = generatePointcloud(new THREE.Color(0, 1, 0));
+        pcBuffer.scale.set(0.002, 0.002, 0.002);
+        pcBuffer.position.set(0, -1, -2);
+        scene.add(pcBuffer);
+        pointclouds = [pcBuffer]
+    })
 
     const sphereGeometry = new THREE.SphereGeometry(0.02, 10, 10);
     const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
