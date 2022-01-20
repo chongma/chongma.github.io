@@ -4,6 +4,7 @@ import { RGBELoader } from '../../libs/three/jsm/RGBELoader.js';
 import { Stats } from '../../libs/stats.module.js';
 import { XRControllerModelFactory } from '../../libs/three/jsm/XRControllerModelFactory.js';
 import { VRButton } from './VRButton.js';
+import { OrbitControls } from '../../libs/three/jsm/OrbitControls.js';
 
 import { fetchProfile } from '../../libs/three/jsm/motion-controllers.module.js';
 
@@ -11,6 +12,7 @@ const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profile
 const DEFAULT_PROFILE = 'generic-trigger';
 
 let renderer, scene, camera, stats
+let dolly, controls
 let pointclouds = []
 let raycaster
 let intersection = null
@@ -29,17 +31,23 @@ const pointer = new THREE.Vector2()
 const spheres = []
 
 const threshold = 0.01
-const pointSize = 0.02
+const pointSize = 0.01
 const width = 80
 const length = 160
 const rotateY = new THREE.Matrix4().makeRotationY(0.005)
 
-start()
+init()
 
 async function start() {
     try {
         await loadBinary()
-        init()
+        binary.forEach(sensor => {
+            const pcBuffer = generatePointcloud(sensor);
+            pcBuffer.scale.set(0.02, 0.02, 0.02);
+            // pcBuffer.position.set(0, -1, 4);
+            scene.add(pcBuffer);
+            pointclouds.push(pcBuffer)
+        })
     } catch (err) {
         console.error(err)
     }
@@ -86,6 +94,8 @@ function generatePointCloudGeometry(sensor) {
     const colors = new Float32Array(numPoints * 3);
 
     let k = 0;
+
+    // const colour = new THREE.Color(randomColour())
 
     sensor.points.forEach((node, index) => {
 
@@ -138,7 +148,7 @@ function init() {
     clock = new THREE.Clock();
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 1.6, 3);
+    camera.position.set(0, 1.6, 0);
     camera.lookAt(scene.position);
     camera.updateMatrix();
 
@@ -148,13 +158,7 @@ function init() {
     light.position.set(1, 1, 1).normalize();
     scene.add(light);
 
-    binary.forEach(sensor => {
-        const pcBuffer = generatePointcloud(sensor);
-        pcBuffer.scale.set(0.02, 0.02, 0.02);
-        pcBuffer.position.set(0, -1, -2);
-        scene.add(pcBuffer);
-        pointclouds.push(pcBuffer)
-    })
+    start()
 
     // const pcBuffer = generatePointcloud(new THREE.Color(1, 0, 0), width, length);
     // pcBuffer.scale.set(5, 10, 10);
@@ -175,6 +179,7 @@ function init() {
 
     //
 
+    //THESE SPHERES ARE FOR THE SNAKE
     const sphereGeometry = new THREE.SphereGeometry(0.02, 10, 10);
     const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
@@ -191,9 +196,17 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(renderer.domElement);
 
-    // controls = new OrbitControls(camera, renderer.domElement);
-    // controls.target.set(0, 1.6, 0);
-    // controls.update();   
+    dolly = new THREE.Object3D();
+    dolly.position.set(0, 0, 3);
+    dolly.add(camera);
+    const dummyCam = new THREE.Object3D();
+    camera.add(dummyCam);
+    scene.add(dolly)
+
+    controls = new OrbitControls(dolly, renderer.domElement);
+    controls.autoRotate = true;
+    // controls.target.set(0, -1, 4);
+    // controls.update();
 
     raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = threshold;
@@ -347,12 +360,12 @@ function buildController(index, line, modelFactory) {
     controller.userData.selectPressed = false;
     controller.userData.index = index;
     if (line) controller.add(line.clone());
-    scene.add(controller);
+    dolly.add(controller);
     let grip;
     if (modelFactory) {
         grip = renderer.xr.getControllerGrip(index);
         grip.add(modelFactory.createControllerModel(grip));
-        scene.add(grip);
+        dolly.add(grip);
     }
     return { controller, grip };
 }
@@ -361,12 +374,6 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    render();
-    stats.update();
 }
 
 function createButtonStates(components) {
@@ -433,8 +440,14 @@ function handleController(controller) {
 }
 
 function render() {
-    stats.update()
     if (renderer.xr.isPresenting) {
+        // if (dolly) {
+        //     dolly.rotation.y += 0.4 * clock.getDelta();
+        //     // camera.lookAt()
+        // }       
+        if (controls) {
+            controls.update();
+        }
         if (controllers) {
             Object.values(controllers).forEach((value) => {
                 handleController(value.controller)
@@ -442,5 +455,4 @@ function render() {
         }
     }
     renderer.render(scene, camera)
-
 }
