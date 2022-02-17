@@ -8,7 +8,7 @@ import { BoxLineGeometry } from '../../libs/three/jsm/BoxLineGeometry.js';
 import { readAxf } from '../../libs/aspectx.js'
 
 const PARTICLE_SIZE = 0.02
-const factor = 1 / 10000
+const factor = 1 / 5000
 const factor2 = 1 / 1000
 
 let clock
@@ -242,10 +242,10 @@ function renderAxf() {
             })
         });
         splineBodyContainer.scale.set(factor, factor, factor)
-        splineBodyContainer.position.set(0, 1, -1)
+        splineBodyContainer.position.set(1.5, 1.9, -2)
         room.add(splineBodyContainer)
         surfaceBodyContainer.scale.set(factor, factor, factor)
-        surfaceBodyContainer.position.set(-1, 1, -1)
+        surfaceBodyContainer.position.set(0, 1.9, -2)
         room.add(surfaceBodyContainer)
     }
 }
