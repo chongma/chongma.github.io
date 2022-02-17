@@ -242,7 +242,7 @@ function renderAxf() {
             })
         });
         splineBodyContainer.scale.set(factor, factor, factor)
-        splineBodyContainer.position.set(1, 1, -1)
+        splineBodyContainer.position.set(0, 1, -1)
         room.add(splineBodyContainer)
         surfaceBodyContainer.scale.set(factor, factor, factor)
         surfaceBodyContainer.position.set(-1, 1, -1)
