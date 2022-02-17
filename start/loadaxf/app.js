@@ -222,6 +222,7 @@ function renderAxf() {
         const scolour = randomColour();
         const splineBodyContainer = new THREE.Object3D()
         const surfaceBodyContainer = new THREE.Object3D()
+        const wireframeBodyContainer = new THREE.Object3D()
         axf.bodyParts.forEach((bodypart) => {
             const colour = randomColour();
             bodypart.layers.forEach((layer) =>
@@ -238,7 +239,13 @@ function renderAxf() {
                 });
             }
             bodypart.splineRegions.forEach((splineRegion) => {
-                renderPolygons(surfaceBodyContainer, splineRegion)
+                if (!splineRegion.polygons || !splineRegion.polygons.length) {
+                    console.log(splineRegion)
+                    return
+                }
+                const geometry = geometryPolygons(splineRegion)
+                renderPolygons(surfaceBodyContainer, geometry)
+                renderWireframe(wireframeBodyContainer, geometry)
             })
         });
         splineBodyContainer.scale.set(factor, factor, factor)
@@ -247,15 +254,22 @@ function renderAxf() {
         surfaceBodyContainer.scale.set(factor, factor, factor)
         surfaceBodyContainer.position.set(0, 1.9, -2)
         room.add(surfaceBodyContainer)
+        wireframeBodyContainer.scale.set(factor, factor, factor)
+        wireframeBodyContainer.position.set(-1.5, 1.9, -2)
+        room.add(wireframeBodyContainer)
     }
 }
 
-function renderPolygons(container, splineRegion) {
-    if (!splineRegion.polygons || !splineRegion.polygons.length) {
-        console.log(splineRegion)
-        return
-    }
-    const geometry = geometryPolygons(splineRegion)
+function renderWireframe(container, geometry) {
+    const wireframe = new THREE.WireframeGeometry(geometry);
+    const line = new THREE.LineSegments(wireframe);
+    line.material.depthTest = false;
+    line.material.opacity = 0.25;
+    line.material.transparent = true;
+    container.add(line);
+}
+
+function renderPolygons(container, geometry) {
     // const loader = new THREE.TextureLoader();
     // const map1 = loader.load('../../assets/7.gold-textures.jpg');
     // const material = new THREE.ShaderMaterial({
