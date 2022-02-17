@@ -3,8 +3,9 @@ import { VRButton } from './VRButton.js';
 import { XRControllerModelFactory } from '../../libs/three/jsm/XRControllerModelFactory.js';
 import { Stats } from '../../libs/stats.module.js';
 import { OrbitControls } from '../../libs/three/jsm/OrbitControls.js';
-
 import { BoxLineGeometry } from '../../libs/three/jsm/BoxLineGeometry.js';
+
+import { readAxf } from '../../libs/aspectx.js'
 
 const PARTICLE_SIZE = 0.02
 const factor = 1 / 10000
@@ -103,13 +104,13 @@ function initScene() {
 
     loadMarker()
 
-    loadBalls()
+    // loadBalls()
 
     loadAxf()
     // loadObj()
     setTimeout(function () {
         renderAxf()
-        renderObj()
+        // renderObj()
     }, 1000)
 
 }
@@ -122,25 +123,25 @@ function loadMarker() {
     scene.add(marker);
 }
 
-function loadBalls() {
-    const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
-    for (let i = 0; i < 200; i++) {
-        const object = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
-        object.position.x = random(-2, 2);
-        object.position.y = random(0, 4);
-        object.position.z = random(-2, 2);
-        room.add(object);
-    }
-}
+// function loadBalls() {
+//     const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
+//     for (let i = 0; i < 200; i++) {
+//         const object = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
+//         object.position.x = random(-2, 2);
+//         object.position.y = random(0, 4);
+//         object.position.z = random(-2, 2);
+//         room.add(object);
+//     }
+// }
 
 function geometryLayer(spline, layerY) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(spline.nodes.length * 3);
     spline.nodes.forEach((node, index) => {
         const offset = index * 3
-        positions[offset] = node.point.x * factor;
-        positions[offset + 1] = (layerY * factor) + 1;
-        positions[offset + 2] = (node.point.y * factor) - 1;
+        positions[offset] = node.point.x;
+        positions[offset + 1] = (layerY) + 1;
+        positions[offset + 2] = (node.point.y) - 1;
     });
     // console.log(positions);
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -154,14 +155,13 @@ function geometryFrontSilhouette(spline) {
     const positions = new Float32Array(spline.nodes.length * 3);
     spline.nodes.forEach((node, index) => {
         const offset = index * 3
-        positions[offset] = node.point.x * factor;
-        positions[offset + 1] = (node.point.y * factor) + 1;
+        positions[offset] = node.point.x;
+        positions[offset + 1] = (node.point.y) + 1;
         positions[offset + 2] = 0 - 1;
     });
     // console.log(positions);
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.computeBoundingBox();
-    // geometry.scale(factor, factor, factor);
     return geometry;
 }
 
@@ -171,13 +171,11 @@ function geometrySideSilhouette(spline) {
     spline.nodes.forEach((node, index) => {
         const offset = index * 3
         positions[offset] = 0;
-        positions[offset + 1] = (node.point.y * factor) + 1;
-        positions[offset + 2] = (node.point.x * factor) - 1;
+        positions[offset + 1] = (node.point.y) + 1;
+        positions[offset + 2] = (node.point.x) - 1;
     });
-    // console.log(positions);
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.computeBoundingBox();
-    // geometry.scale(factor, factor, factor);
     return geometry;
 }
 
@@ -190,13 +188,13 @@ function geometrySideSilhouette(spline) {
 //   group.add(line);
 // }
 
-function renderSplineColour(spline, linewidth, colour) {
+function renderSplineColour(container, spline, linewidth, colour) {
     const material = new THREE.LineBasicMaterial({
         linewidth,
         color: colour
     });
     const line = new THREE.Line(spline, material);
-    room.add(line);
+    container.add(line);
 }
 
 function randomColour() {
@@ -212,167 +210,272 @@ function loadAxf() {
         var arrayBuffer = oReq.response; // Note: not oReq.responseText
         // console.log(arrayBuffer)
         var b = buffer.Buffer.from(arrayBuffer)
-        console.log(axfBean)
-        axf = axfBean.default.readAxf(b)
+        axf = readAxf(b, false)
+        console.log(axf)
     };
     oReq.send(null);
 }
 
 function renderAxf() {
-    // room.remove(group);
-    // group = new THREE.Group();
-    // room.add(group);
-    // renderer.setAnimationLoop(animate);
-    // console.log(axf)
     if (axf) {
         const fcolour = randomColour();
         const scolour = randomColour();
+        const splineBodyContainer = new THREE.Object3D()
+        const surfaceBodyContainer = new THREE.Object3D()
         axf.bodyParts.forEach((bodypart) => {
             const colour = randomColour();
             bodypart.layers.forEach((layer) =>
-                renderSplineColour(geometryLayer(layer.splineLayer.surface, layer.y), 1.5, colour)
+                renderSplineColour(splineBodyContainer, geometryLayer(layer.splineLayer.surface, layer.y), 1.5, colour)
             );
             if (bodypart.frontSilhouette) {
                 bodypart.frontSilhouette.forEach((sil) => {
-                    renderSplineColour(geometryFrontSilhouette(sil.spline), 4, fcolour);
+                    renderSplineColour(splineBodyContainer, geometryFrontSilhouette(sil.spline), 4, fcolour);
                 });
             }
             if (bodypart.sideSilhouette) {
                 bodypart.sideSilhouette.forEach((sil) => {
-                    renderSplineColour(geometrySideSilhouette(sil.spline), 4, scolour);
+                    renderSplineColour(splineBodyContainer, geometrySideSilhouette(sil.spline), 4, scolour);
                 });
             }
+            bodypart.splineRegions.forEach((splineRegion) => {
+                renderPolygons(surfaceBodyContainer, splineRegion)
+            })
         });
+        splineBodyContainer.scale.set(factor, factor, factor)
+        splineBodyContainer.position.set(1, 1, -1)
+        room.add(splineBodyContainer)
+        surfaceBodyContainer.scale.set(factor, factor, factor)
+        surfaceBodyContainer.position.set(-1, 1, -1)
+        room.add(surfaceBodyContainer)
     }
-    // group.position.x = 1
-    // group.position.y = 1
-    // group.position.z = -1
 }
 
-function loadObj() {
-    var oReq = new XMLHttpRequest();
-    oReq.open("GET", "/assets/test.obj", true);
-    oReq.responseType = "arraybuffer";
-
-    oReq.onload = function (oEvent) {
-        var arrayBuffer = oReq.response; // Note: not oReq.responseText
-        // console.log(arrayBuffer)
-        var b = buffer.Buffer.from(arrayBuffer)
-        var lines = b.toString().split(/(?:\r\n|\r|\n)/g);
-        let vertices = []
-        lines.forEach(line => {
-            if (line.startsWith('v ')) {
-                let parts = line.split(' ')
-                let vertex = [parts[1], parts[2], parts[3]]
-                vertices.push(vertex)
-            }
-        })
-        obj = vertices
-    };
-    oReq.send(null);
-}
-
-function renderObj() {
-    // scene.remove(group2);
-    // group2 = new THREE.Group();
-    // room.add(group2);
-    // renderer.setAnimationLoop(animate);
-    // console.log(obj)
-    if (obj) {
-        // const colour = randomColour();
-        // renderPointCloudColour(geometryPoints2())
-        // loadGeometryBalls()
-        geometryPoints()
+function renderPolygons(container, splineRegion) {
+    if (!splineRegion.polygons || !splineRegion.polygons.length) {
+        console.log(splineRegion)
+        return
     }
-    // group2.position.x = -1
-    // group2.position.y = 0
-    // group2.position.z = -1
-}
-
-function loadGeometryBalls() {
-    const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
-    obj.forEach((node, index) => {
-        const object = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
-        object.position.x = (node[0] / 1000) - 1;
-        object.position.y = node[1] / 1000;
-        object.position.z = (node[2] / 1000) - 1;
-        room.add(object);
+    const geometry = geometryPolygons(splineRegion)
+    // const loader = new THREE.TextureLoader();
+    // const map1 = loader.load('../../assets/7.gold-textures.jpg');
+    // const material = new THREE.ShaderMaterial({
+    //     uniforms: {
+    //         uTextures: {
+    //             value: [map1]
+    //         }
+    //     },
+    //     // vertexShader: document.getElementById('vertexShader').textContent,
+    //     // fragmentShader: document.getElementById('fragmentShader').textContent,
+    //     side: THREE.DoubleSide,
+    //     glslVersion: THREE.GLSL3
+    // });
+    // const material = new THREE.ShaderMaterial({
+    //     uniforms: {
+    //         tMatCap: { type: 't', value: map1 },
+    //         time: { type: 'f', value: 0 },
+    //         bump: { type: 'f', value: 0 },
+    //         noise: { type: 'f', value: .04 },
+    //         useNormal: { type: 'f', value: 0 },
+    //         normalScale: { type: 'f', value: .5 },
+    //         normalRepeat: { type: 'f', value: 1 }
+    //     }
+    // });
+    // const texture = new THREE.TextureLoader().load('../../assets/7.gold-textures.jpg');
+    // const material = new THREE.MeshBasicMaterial({ map: texture });
+    // const diffuseColor = new THREE.Color().setHSL(1, 0.5, 1 * 0.5 + 0.1)
+    // const material = new THREE.MeshStandardMaterial({
+    //     map: texture, bumpMap:
+    //         texture,
+    //     bumpScale: 1,
+    //     color: diffuseColor,
+    //     metalness: 0.8,
+    //     roughness: 0.2
+    // });
+    // const material = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
+    // const material = new THREE.MeshLambertMaterial({ color: 0xaa0000 });
+    const material = new THREE.MeshPhongMaterial({
+        color: 0xaaaaaa, specular: 0xffffff, shininess: 250,
+        side: THREE.DoubleSide, vertexColors: true, transparent: true
     });
+    const mesh = new THREE.Mesh(geometry, material);
+    container.add(mesh);
 }
 
-function geometryPoints() {
+function geometryPolygons(splineRegion) {
     const geometry = new THREE.BufferGeometry();
-    const numPoints = obj.length;
-    const positions = new Float32Array(numPoints * 3);
-    const colors = new Float32Array(numPoints * 3);
-    let k = 0;
-    obj.forEach((node, index) => {
-        const x = node[0];
-        const y = node[1];
-        const z = node[2];
-        positions[3 * k] = x;
-        positions[3 * k + 1] = y;
-        positions[3 * k + 2] = z;
-        const colour = new THREE.Color(randomColour())
-        colors[3 * k] = colour.r;
-        colors[3 * k + 1] = colour.g;
-        colors[3 * k + 2] = colour.b;
-        k++;
-    });
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geometry.computeBoundingBox();
-    const material = new THREE.PointsMaterial({ size: PARTICLE_SIZE, vertexColors: true });
-    particles = new THREE.Points(geometry, material);
-    particles.scale.set(factor2, factor2, factor2)
-    particles.position.set(-1, 0, -1)
-    scene.add(particles);
-    pointclouds = [particles]
-}
-
-function geometryPoints2() {
     const positions = [];
-    const sizes = [];
+    const normals = [];
     const colors = [];
-    obj.forEach((node, index) => {
-        const x = (node[0] / 1000) - 1;
-        const y = node[1] / 1000;
-        const z = (node[2] / 1000) - 1;
-        positions.push(x, y, z);
-        sizes.push(PARTICLE_SIZE)
-        const colour = new THREE.Color(randomColour())
-        // const colour = new THREE.Color(0xbbbbbb)
-        colour.toArray(colors, index * 3);
-    });
-    // console.log(positions);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('customColor', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-    // geometry.computeBoundingSphere();
-    // geometry.scale(factor2, factor2, factor2);
-    return geometry;
+    const pA = new THREE.Vector3();
+    const pB = new THREE.Vector3();
+    const pC = new THREE.Vector3();
+    const cb = new THREE.Vector3();
+    const ab = new THREE.Vector3();
+    const n = 800
+    const color = new THREE.Color();
+    for (let polygon of splineRegion.polygons) {
+        const p0 = splineRegion.vertices[polygon.pointReference[0]]
+        const p1 = splineRegion.vertices[polygon.pointReference[1]]
+        const p2 = splineRegion.vertices[polygon.pointReference[2]]
+        positions.push(p0.x, p0.y, p0.z);
+        positions.push(p1.x, p1.y, p1.z);
+        positions.push(p2.x, p2.y, p2.z);
+        pA.set(p0.x, p0.y, p0.z);
+        pB.set(p1.x, p1.y, p1.z);
+        pC.set(p2.x, p2.y, p2.z);
+        cb.subVectors(pC, pB);
+        ab.subVectors(pA, pB);
+        cb.cross(ab);
+        cb.normalize();
+        const nx = cb.x;
+        const ny = cb.y;
+        const nz = cb.z;
+        normals.push(nx, ny, nz);
+        normals.push(nx, ny, nz);
+        normals.push(nx, ny, nz);
+        const vx = (p0.x / n) + 0.5;
+        const vy = (p0.y / n) + 0.5;
+        const vz = (p0.z / n) + 0.5;
+        color.setRGB(vx, vy, vz);
+        const alpha = Math.random();
+        colors.push(color.r, color.g, color.b, alpha);
+        colors.push(color.r, color.g, color.b, alpha);
+        colors.push(color.r, color.g, color.b, alpha);
+    }
+    function disposeArray() {
+        this.array = null;
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3).onUpload(disposeArray));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3).onUpload(disposeArray));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4).onUpload(disposeArray));
+    geometry.computeBoundingSphere()
+    return geometry
 }
 
-function renderPointCloudColour(geometry) {
-    // room.remove(particles)
-    // const material = new THREE.PointsMaterial();
-    const material = new THREE.ShaderMaterial({
-        uniforms: {
-            color: { value: new THREE.Color(0xffffff) },
-            pointTexture: { value: new THREE.TextureLoader().load("../../assets/disc.png") }
-        },
-        vertexShader: document.getElementById('vertexshader').textContent,
-        fragmentShader: document.getElementById('fragmentshader').textContent,
+// function loadObj() {
+//     var oReq = new XMLHttpRequest();
+//     oReq.open("GET", "/assets/test.obj", true);
+//     oReq.responseType = "arraybuffer";
 
-        blending: THREE.AdditiveBlending,
-        depthTest: false,
-        transparent: true
+//     oReq.onload = function (oEvent) {
+//         var arrayBuffer = oReq.response; // Note: not oReq.responseText
+//         // console.log(arrayBuffer)
+//         var b = buffer.Buffer.from(arrayBuffer)
+//         var lines = b.toString().split(/(?:\r\n|\r|\n)/g);
+//         let vertices = []
+//         lines.forEach(line => {
+//             if (line.startsWith('v ')) {
+//                 let parts = line.split(' ')
+//                 let vertex = [parts[1], parts[2], parts[3]]
+//                 vertices.push(vertex)
+//             }
+//         })
+//         obj = vertices
+//     };
+//     oReq.send(null);
+// }
 
-    });
-    particles = new THREE.Points(geometry, material);
-    room.add(particles);
-}
+// function renderObj() {
+//     // scene.remove(group2);
+//     // group2 = new THREE.Group();
+//     // room.add(group2);
+//     // renderer.setAnimationLoop(animate);
+//     // console.log(obj)
+//     if (obj) {
+//         // const colour = randomColour();
+//         // renderPointCloudColour(geometryPoints2())
+//         // loadGeometryBalls()
+//         geometryPoints()
+//     }
+//     // group2.position.x = -1
+//     // group2.position.y = 0
+//     // group2.position.z = -1
+// }
+
+// function loadGeometryBalls() {
+//     const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
+//     obj.forEach((node, index) => {
+//         const object = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
+//         object.position.x = (node[0] / 1000) - 1;
+//         object.position.y = node[1] / 1000;
+//         object.position.z = (node[2] / 1000) - 1;
+//         room.add(object);
+//     });
+// }
+
+// function geometryPoints() {
+//     const geometry = new THREE.BufferGeometry();
+//     const numPoints = obj.length;
+//     const positions = new Float32Array(numPoints * 3);
+//     const colors = new Float32Array(numPoints * 3);
+//     let k = 0;
+//     obj.forEach((node, index) => {
+//         const x = node[0];
+//         const y = node[1];
+//         const z = node[2];
+//         positions[3 * k] = x;
+//         positions[3 * k + 1] = y;
+//         positions[3 * k + 2] = z;
+//         const colour = new THREE.Color(randomColour())
+//         colors[3 * k] = colour.r;
+//         colors[3 * k + 1] = colour.g;
+//         colors[3 * k + 2] = colour.b;
+//         k++;
+//     });
+//     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+//     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+//     geometry.computeBoundingBox();
+//     const material = new THREE.PointsMaterial({ size: PARTICLE_SIZE, vertexColors: true });
+//     particles = new THREE.Points(geometry, material);
+//     particles.scale.set(factor2, factor2, factor2)
+//     particles.position.set(-1, 0, -1)
+//     scene.add(particles);
+//     pointclouds = [particles]
+// }
+
+// function geometryPoints2() {
+//     const positions = [];
+//     const sizes = [];
+//     const colors = [];
+//     obj.forEach((node, index) => {
+//         const x = (node[0] / 1000) - 1;
+//         const y = node[1] / 1000;
+//         const z = (node[2] / 1000) - 1;
+//         positions.push(x, y, z);
+//         sizes.push(PARTICLE_SIZE)
+//         const colour = new THREE.Color(randomColour())
+//         // const colour = new THREE.Color(0xbbbbbb)
+//         colour.toArray(colors, index * 3);
+//     });
+//     // console.log(positions);
+//     const geometry = new THREE.BufferGeometry();
+//     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+//     geometry.setAttribute('customColor', new THREE.Float32BufferAttribute(colors, 3));
+//     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+//     // geometry.computeBoundingSphere();
+//     // geometry.scale(factor2, factor2, factor2);
+//     return geometry;
+// }
+
+// function renderPointCloudColour(geometry) {
+//     // room.remove(particles)
+//     // const material = new THREE.PointsMaterial();
+//     const material = new THREE.ShaderMaterial({
+//         uniforms: {
+//             color: { value: new THREE.Color(0xffffff) },
+//             pointTexture: { value: new THREE.TextureLoader().load("../../assets/disc.png") }
+//         },
+//         vertexShader: document.getElementById('vertexshader').textContent,
+//         fragmentShader: document.getElementById('fragmentshader').textContent,
+
+//         blending: THREE.AdditiveBlending,
+//         depthTest: false,
+//         transparent: true
+
+//     });
+//     particles = new THREE.Points(geometry, material);
+//     room.add(particles);
+// }
 
 // function addConstraint(pos, body) {
 //     const pivot = pos.clone()

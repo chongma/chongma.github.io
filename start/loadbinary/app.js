@@ -5,8 +5,9 @@ import { Stats } from '../../libs/stats.module.js';
 import { XRControllerModelFactory } from '../../libs/three/jsm/XRControllerModelFactory.js';
 import { VRButton } from './VRButton.js';
 import { OrbitControls } from '../../libs/three/jsm/OrbitControls.js';
-
 import { fetchProfile } from '../../libs/three/jsm/motion-controllers.module.js';
+
+import { ReadBinaryFile } from '../../libs/aspectx.js'
 
 const DEFAULT_PROFILES_PATH = 'https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles';
 const DEFAULT_PROFILE = 'generic-trigger';
@@ -63,7 +64,7 @@ function loadBinary() {
                 var arrayBuffer = xhr.response; // Note: not xhr.responseText
                 // console.log(arrayBuffer)
                 var b = buffer.Buffer.from(arrayBuffer)
-                binary = sizeStreamBean.ReadBinaryFile(b)
+                binary = ReadBinaryFile(b)
                 resolve();
             } else {
                 reject({
