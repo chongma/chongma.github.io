@@ -210,7 +210,7 @@ function loadAxf() {
         var arrayBuffer = oReq.response; // Note: not oReq.responseText
         // console.log(arrayBuffer)
         var b = buffer.Buffer.from(arrayBuffer)
-        axf = readAxf(b, false)
+        axf = readAxf(b)
         console.log(axf)
     };
     oReq.send(null);
@@ -302,6 +302,7 @@ function renderPolygons(container, splineRegion) {
 }
 
 function geometryPolygons(splineRegion) {
+    //https://threejs.org/examples/#webgl_buffergeometry
     const geometry = new THREE.BufferGeometry();
     const positions = [];
     const normals = [];
@@ -311,32 +312,39 @@ function geometryPolygons(splineRegion) {
     const pC = new THREE.Vector3();
     const cb = new THREE.Vector3();
     const ab = new THREE.Vector3();
-    const n = 800
+    // const n = 800
     const color = new THREE.Color();
     for (let polygon of splineRegion.polygons) {
         const p0 = splineRegion.vertices[polygon.pointReference[0]]
         const p1 = splineRegion.vertices[polygon.pointReference[1]]
         const p2 = splineRegion.vertices[polygon.pointReference[2]]
-        positions.push(p0.x, p0.y, p0.z);
-        positions.push(p1.x, p1.y, p1.z);
-        positions.push(p2.x, p2.y, p2.z);
-        pA.set(p0.x, p0.y, p0.z);
-        pB.set(p1.x, p1.y, p1.z);
-        pC.set(p2.x, p2.y, p2.z);
-        cb.subVectors(pC, pB);
-        ab.subVectors(pA, pB);
-        cb.cross(ab);
-        cb.normalize();
-        const nx = cb.x;
-        const ny = cb.y;
-        const nz = cb.z;
-        normals.push(nx, ny, nz);
-        normals.push(nx, ny, nz);
-        normals.push(nx, ny, nz);
-        const vx = (p0.x / n) + 0.5;
-        const vy = (p0.y / n) + 0.5;
-        const vz = (p0.z / n) + 0.5;
-        color.setRGB(vx, vy, vz);
+        positions.push(p0.x, p0.y, p0.z)
+        positions.push(p1.x, p1.y, p1.z)
+        positions.push(p2.x, p2.y, p2.z)
+        const n0 = splineRegion.normals[polygon.pointReference[0]]
+        const n1 = splineRegion.normals[polygon.pointReference[1]]
+        const n2 = splineRegion.normals[polygon.pointReference[2]]
+        normals.push(n0.x, n0.y, n0.z)
+        normals.push(n1.x, n1.y, n1.z)
+        normals.push(n2.x, n2.y, n2.z)
+        // pA.set(p0.x, p0.y, p0.z)
+        // pB.set(p1.x, p1.y, p1.z)
+        // pC.set(p2.x, p2.y, p2.z)
+        // cb.subVectors(pC, pB)
+        // ab.subVectors(pA, pB)
+        // cb.cross(ab)
+        // cb.normalize()
+        // const nx = cb.x
+        // const ny = cb.y
+        // const nz = cb.z
+        // normals.push(nx, ny, nz)
+        // normals.push(nx, ny, nz)
+        // normals.push(nx, ny, nz)
+        // const vx = (p0.x / n) + 0.5;
+        // const vy = (p0.y / n) + 0.5;
+        // const vz = (p0.z / n) + 0.5;
+        // color.setRGB(vx, vy, vz);
+        color.setRGB(1, 1, 0.8);
         const alpha = Math.random();
         colors.push(color.r, color.g, color.b, alpha);
         colors.push(color.r, color.g, color.b, alpha);
