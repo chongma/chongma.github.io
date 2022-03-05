@@ -11,37 +11,33 @@ const PARTICLE_SIZE = 0.02
 const factor = 1 / 5000
 const factor2 = 1 / 1000
 
-let clock
-let camera
-let scene
-let renderer
-let controls
-let stats
-let raycaster
+let clock, camera, scene, renderer, controls, stats, raycaster
 const threshold = 0.01;
 
-let workingMatrix
-let workingVector
-let origin
+let workingMatrix, workingVector, origin
 
 let radius
-let room
+let room, splineBodyContainer, surfaceBodyContainer, wireframeBodyContainer, index = 0
+const filenames = ['bmi18to25', 'bmi25to30', 'bmi30to40', 'bmiGreaterThan40', 'test']
+
 let marker
 // let group
-let controller
-let controllerGrip
-let controllerLine
-let particles
-let pointclouds
+let controller, controllerGrip, controllerLine
+let particles, pointclouds
 
-let axf
-let obj
+let axf, obj
 
 let INTERSECTED
 
 window.addEventListener('DOMContentLoaded', () => {
     initialise()
 })
+
+document.body.onkeyup = function (e) {
+    if (e.keyCode == 32) {
+        loadNextBody()
+    }
+}
 
 function initialise() {
     const container = document.createElement('div');
@@ -74,7 +70,7 @@ function initialise() {
 
     stats = new Stats();
 
-    initScene();
+    loadRoom();
     setupXR();
 
     window.addEventListener('resize', resize);
@@ -85,14 +81,28 @@ function initialise() {
     workingMatrix = new THREE.Matrix4();
     origin = new THREE.Vector3();
 
+    loadNextBody()
+
     renderer.setAnimationLoop(render);
+}
+
+async function loadNextBody() {
+    room.remove(splineBodyContainer)
+    room.remove(surfaceBodyContainer)
+    room.remove(wireframeBodyContainer)
+    await loadAxf(`/assets/axf/${filenames[index]}.axf`)
+    renderAxf()
+    index++
+    if (index > filenames.length - 1) {
+        index = 0
+    }
 }
 
 function random(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-function initScene() {
+function loadRoom() {
     radius = 0.08;
 
     room = new THREE.LineSegments(
@@ -103,16 +113,6 @@ function initScene() {
     scene.add(room);
 
     loadMarker()
-
-    // loadBalls()
-
-    loadAxf()
-    // loadObj()
-    setTimeout(function () {
-        renderAxf()
-        // renderObj()
-    }, 1000)
-
 }
 
 function loadMarker() {
@@ -122,17 +122,6 @@ function loadMarker() {
     marker.visible = false;
     scene.add(marker);
 }
-
-// function loadBalls() {
-//     const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
-//     for (let i = 0; i < 200; i++) {
-//         const object = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff }));
-//         object.position.x = random(-2, 2);
-//         object.position.y = random(0, 4);
-//         object.position.z = random(-2, 2);
-//         room.add(object);
-//     }
-// }
 
 function geometryLayer(spline, layerY) {
     const geometry = new THREE.BufferGeometry();
@@ -201,28 +190,35 @@ function randomColour() {
     return Math.random() * 0xffffff;
 }
 
-function loadAxf() {
-    var oReq = new XMLHttpRequest();
-    oReq.open("GET", "/assets/test.axf", true);
-    oReq.responseType = "arraybuffer";
+function loadAxf(path) {
+    return new Promise(function (resolve, reject) {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", path, true);
+        xhr.responseType = "arraybuffer";
 
-    oReq.onload = function (oEvent) {
-        var arrayBuffer = oReq.response; // Note: not oReq.responseText
-        // console.log(arrayBuffer)
-        var b = buffer.Buffer.from(arrayBuffer)
-        axf = readAxf(b)
-        console.log(axf)
-    };
-    oReq.send(null);
+        xhr.onload = function (oEvent) {
+            var arrayBuffer = xhr.response;
+            var b = buffer.Buffer.from(arrayBuffer)
+            axf = readAxf(b)
+            resolve()
+        };
+        xhr.onerror = function () {
+            reject({
+                status: this.status,
+                statusText: xhr.statusText
+            });
+        };
+        xhr.send();
+    });
 }
 
 function renderAxf() {
     if (axf) {
         const fcolour = randomColour();
         const scolour = randomColour();
-        const splineBodyContainer = new THREE.Object3D()
-        const surfaceBodyContainer = new THREE.Object3D()
-        const wireframeBodyContainer = new THREE.Object3D()
+        splineBodyContainer = new THREE.Object3D()
+        surfaceBodyContainer = new THREE.Object3D()
+        wireframeBodyContainer = new THREE.Object3D()
         axf.bodyParts.forEach((bodypart) => {
             const colour = randomColour();
             bodypart.layers.forEach((layer) =>
@@ -270,45 +266,8 @@ function renderWireframe(container, geometry) {
 }
 
 function renderPolygons(container, geometry) {
-    // const loader = new THREE.TextureLoader();
-    // const map1 = loader.load('../../assets/7.gold-textures.jpg');
-    // const material = new THREE.ShaderMaterial({
-    //     uniforms: {
-    //         uTextures: {
-    //             value: [map1]
-    //         }
-    //     },
-    //     // vertexShader: document.getElementById('vertexShader').textContent,
-    //     // fragmentShader: document.getElementById('fragmentShader').textContent,
-    //     side: THREE.DoubleSide,
-    //     glslVersion: THREE.GLSL3
-    // });
-    // const material = new THREE.ShaderMaterial({
-    //     uniforms: {
-    //         tMatCap: { type: 't', value: map1 },
-    //         time: { type: 'f', value: 0 },
-    //         bump: { type: 'f', value: 0 },
-    //         noise: { type: 'f', value: .04 },
-    //         useNormal: { type: 'f', value: 0 },
-    //         normalScale: { type: 'f', value: .5 },
-    //         normalRepeat: { type: 'f', value: 1 }
-    //     }
-    // });
-    // const texture = new THREE.TextureLoader().load('../../assets/7.gold-textures.jpg');
-    // const material = new THREE.MeshBasicMaterial({ map: texture });
-    // const diffuseColor = new THREE.Color().setHSL(1, 0.5, 1 * 0.5 + 0.1)
-    // const material = new THREE.MeshStandardMaterial({
-    //     map: texture, bumpMap:
-    //         texture,
-    //     bumpScale: 1,
-    //     color: diffuseColor,
-    //     metalness: 0.8,
-    //     roughness: 0.2
-    // });
-    // const material = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
-    // const material = new THREE.MeshLambertMaterial({ color: 0xaa0000 });
     const material = new THREE.MeshPhongMaterial({
-        color: 0xaaaaaa, specular: 0xffffff, shininess: 250,
+        color: 0xaaaaaa, specular: 0xffffff, shininess: 50,
         side: THREE.DoubleSide, vertexColors: true, transparent: true
     });
     const mesh = new THREE.Mesh(geometry, material);
@@ -373,46 +332,6 @@ function geometryPolygons(splineRegion) {
     geometry.computeBoundingSphere()
     return geometry
 }
-
-// function loadObj() {
-//     var oReq = new XMLHttpRequest();
-//     oReq.open("GET", "/assets/test.obj", true);
-//     oReq.responseType = "arraybuffer";
-
-//     oReq.onload = function (oEvent) {
-//         var arrayBuffer = oReq.response; // Note: not oReq.responseText
-//         // console.log(arrayBuffer)
-//         var b = buffer.Buffer.from(arrayBuffer)
-//         var lines = b.toString().split(/(?:\r\n|\r|\n)/g);
-//         let vertices = []
-//         lines.forEach(line => {
-//             if (line.startsWith('v ')) {
-//                 let parts = line.split(' ')
-//                 let vertex = [parts[1], parts[2], parts[3]]
-//                 vertices.push(vertex)
-//             }
-//         })
-//         obj = vertices
-//     };
-//     oReq.send(null);
-// }
-
-// function renderObj() {
-//     // scene.remove(group2);
-//     // group2 = new THREE.Group();
-//     // room.add(group2);
-//     // renderer.setAnimationLoop(animate);
-//     // console.log(obj)
-//     if (obj) {
-//         // const colour = randomColour();
-//         // renderPointCloudColour(geometryPoints2())
-//         // loadGeometryBalls()
-//         geometryPoints()
-//     }
-//     // group2.position.x = -1
-//     // group2.position.y = 0
-//     // group2.position.z = -1
-// }
 
 // function loadGeometryBalls() {
 //     const geometry = new THREE.IcosahedronBufferGeometry(radius, 2);
@@ -497,18 +416,6 @@ function geometryPolygons(splineRegion) {
 //     });
 //     particles = new THREE.Points(geometry, material);
 //     room.add(particles);
-// }
-
-// function addConstraint(pos, body) {
-//     const pivot = pos.clone()
-//     body.threemesh.worldToLocal(pivot)
-//     jointBody.position.copy(pos)
-
-//     const constraint = new CANNON.PointToPointConstraint(body, pivot, jointBody, new CANNON.Vec3(0, 0, 0))
-
-//     world.addConstraint(constraint)
-
-//     controller.userData.constraint = constraint
 // }
 
 function setupXR() {
