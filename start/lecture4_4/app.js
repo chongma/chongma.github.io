@@ -112,6 +112,7 @@ class App {
             `${filename}.glb`,
             // called when the resource is loaded
             function (gltf) {
+                console.log(gltf)
                 self.animations = {}
                 gltf.animations.forEach(anim => {
                     self.animations[anim.name] = anim
